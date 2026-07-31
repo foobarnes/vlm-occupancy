@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.2.0 - 2026-07-31
+
+### Added
+
+- Editable image-evaluation prompt in initial setup and integration options,
+  with automatic reload and non-configurable structured-output safeguards.
+
 ## 0.1.0 - 2026-07-31
 
 ### Added

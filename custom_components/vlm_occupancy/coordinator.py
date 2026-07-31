@@ -30,11 +30,13 @@ from .const import (
     CONF_MODEL,
     CONF_MOTION_ENTITY_ID,
     CONF_POLL_INTERVAL,
+    CONF_PROMPT,
     CONF_PROVIDER,
     CONF_START_TIME,
     DEFAULT_COOLDOWN,
     DEFAULT_END_TIME,
     DEFAULT_POLL_INTERVAL,
+    DEFAULT_PROMPT,
     DEFAULT_START_TIME,
     DOMAIN,
     MAX_IMAGE_BYTES,
@@ -77,6 +79,7 @@ class VLMOccupancyRuntime:
             entry.data[CONF_ENDPOINT],
             entry.data[CONF_MODEL],
             api_key,
+            entry.options.get(CONF_PROMPT, entry.data.get(CONF_PROMPT, DEFAULT_PROMPT)),
         )
         return cls(hass, entry, client)
 
