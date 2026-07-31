@@ -25,6 +25,7 @@ from .const import (
     CONF_CAMERA_ENTITY_ID,
     CONF_CREDENTIAL_NAME,
     CONF_COOLDOWN,
+    CONF_DEBUG_CAPTURE,
     CONF_ENDPOINT,
     CONF_END_TIME,
     CONF_MODEL,
@@ -34,16 +35,19 @@ from .const import (
     CONF_PROVIDER,
     CONF_START_TIME,
     DEFAULT_COOLDOWN,
+    DEFAULT_DEBUG_CAPTURE,
     DEFAULT_END_TIME,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_PROMPT,
     DEFAULT_START_TIME,
     DOMAIN,
+    DEBUG_IMAGE_DIRECTORY,
     MAX_IMAGE_BYTES,
     SNAPSHOT_ATTEMPTS,
     SNAPSHOT_RETRY_DELAY_SECONDS,
 )
-from .image_quality import is_usable_image
+from .debug_capture import save_rejected_frame
+from .image_quality import inspect_image
 from .vlm_client import OccupancyResult, VLMClient, VLMClientError, create_client
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,8 +63,10 @@ class VLMOccupancyRuntime:
         self.entry = entry
         self.client = client
         self.result: OccupancyResult | None = None
+        self.last_attempted: datetime | None = None
         self.last_evaluated: datetime | None = None
         self.last_error: str | None = None
+        self.last_debug_image: str | None = None
         self._lock = asyncio.Lock()
         self._last_request_monotonic: float | None = None
         self._listeners: set[Callable[[], None]] = set()
@@ -139,26 +145,53 @@ class VLMOccupancyRuntime:
                 return self.result
 
             self._last_request_monotonic = now_monotonic
+            self.last_attempted = dt_util.utcnow()
+            evaluation_started = monotonic()
+            _LOGGER.debug(
+                "VLM occupancy evaluation started force=%s",
+                force,
+            )
             try:
                 content, content_type = await self._async_get_usable_snapshot()
-                self.result = await self.client.async_evaluate(content, content_type)
+                candidate = await self.client.async_evaluate(content, content_type)
+                if candidate.confidence == 0:
+                    raise VLMClientError(
+                        "VLM could not classify the image with nonzero confidence"
+                    )
+                self.result = candidate
             except VLMClientError as err:
                 self.last_error = str(err)
+                _LOGGER.debug(
+                    "VLM occupancy evaluation failed duration=%.2fs error=%s",
+                    monotonic() - evaluation_started,
+                    self.last_error,
+                )
                 self._notify_listeners()
                 raise
             except Exception:
                 self.last_error = "Camera snapshot unavailable"
+                _LOGGER.debug(
+                    "VLM occupancy evaluation failed duration=%.2fs error=internal",
+                    monotonic() - evaluation_started,
+                )
                 self._notify_listeners()
                 raise VLMClientError("Camera snapshot unavailable") from None
 
             self.last_evaluated = dt_util.utcnow()
             self.last_error = None
+            _LOGGER.debug(
+                "VLM occupancy evaluation succeeded duration=%.2fs confidence=%.3f",
+                monotonic() - evaluation_started,
+                self.result.confidence,
+            )
             self._notify_listeners()
             return self.result
 
     async def _async_get_usable_snapshot(self) -> tuple[bytes, str]:
         """Retry cold cameras without sending blank or malformed frames."""
         for attempt in range(SNAPSHOT_ATTEMPTS):
+            attempt_number = attempt + 1
+            attempt_started = monotonic()
             try:
                 image = await async_get_image(
                     self.hass,
@@ -167,16 +200,72 @@ class VLMOccupancyRuntime:
                 )
                 content = image.content
                 content_type = image.content_type or "image/jpeg"
-                if (
-                    content
-                    and len(content) <= MAX_IMAGE_BYTES
-                    and content_type.startswith("image/")
-                    and await self.hass.async_add_executor_job(is_usable_image, content)
-                ):
-                    return content, content_type
+                if not content:
+                    _LOGGER.debug(
+                        "Snapshot attempt=%s/%s rejected reason=empty_response duration=%.2fs",
+                        attempt_number,
+                        SNAPSHOT_ATTEMPTS,
+                        monotonic() - attempt_started,
+                    )
+                elif len(content) > MAX_IMAGE_BYTES:
+                    _LOGGER.debug(
+                        "Snapshot attempt=%s/%s rejected reason=encoded_image_too_large duration=%.2fs",
+                        attempt_number,
+                        SNAPSHOT_ATTEMPTS,
+                        monotonic() - attempt_started,
+                    )
+                elif not content_type.startswith("image/"):
+                    _LOGGER.debug(
+                        "Snapshot attempt=%s/%s rejected reason=invalid_content_type duration=%.2fs",
+                        attempt_number,
+                        SNAPSHOT_ATTEMPTS,
+                        monotonic() - attempt_started,
+                    )
+                else:
+                    quality = await self.hass.async_add_executor_job(
+                        inspect_image, content
+                    )
+                    _LOGGER.debug(
+                        "Snapshot attempt=%s/%s quality=%s dimensions=%sx%s mean_luma=%s contrast=%s black_ratio=%s duration=%.2fs",
+                        attempt_number,
+                        SNAPSHOT_ATTEMPTS,
+                        quality.reason,
+                        quality.width,
+                        quality.height,
+                        quality.mean_luma,
+                        quality.contrast,
+                        quality.black_ratio,
+                        monotonic() - attempt_started,
+                    )
+                    if quality.usable:
+                        return content, content_type
+                    if self.entry.options.get(
+                        CONF_DEBUG_CAPTURE, DEFAULT_DEBUG_CAPTURE
+                    ):
+                        directory = self.hass.config.path(DEBUG_IMAGE_DIRECTORY)
+                        try:
+                            self.last_debug_image = (
+                                await self.hass.async_add_executor_job(
+                                    save_rejected_frame,
+                                    directory,
+                                    content,
+                                    content_type,
+                                )
+                            )
+                            _LOGGER.debug(
+                                "Latest rejected frame saved to protected debug directory"
+                            )
+                        except OSError:
+                            _LOGGER.debug(
+                                "Rejected-frame capture failed error=filesystem"
+                            )
             except Exception:
-                # Camera integrations may fail while starting a cold stream.
-                pass
+                _LOGGER.debug(
+                    "Snapshot attempt=%s/%s rejected reason=camera_or_processing_error duration=%.2fs",
+                    attempt_number,
+                    SNAPSHOT_ATTEMPTS,
+                    monotonic() - attempt_started,
+                )
 
             if attempt < SNAPSHOT_ATTEMPTS - 1:
                 await asyncio.sleep(SNAPSHOT_RETRY_DELAY_SECONDS)

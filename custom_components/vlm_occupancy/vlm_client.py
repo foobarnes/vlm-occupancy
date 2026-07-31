@@ -261,6 +261,8 @@ def _parse_result(value: Any) -> OccupancyResult:
         raise VLMClientError("VLM provider output contained invalid confidence")
     if not 0 <= float(confidence) <= 1:
         raise VLMClientError("VLM provider confidence was outside 0 to 1")
+    if float(confidence) == 0:
+        raise VLMClientError("VLM could not classify the image with nonzero confidence")
     reasoning = parsed["reasoning"]
     if not isinstance(reasoning, str) or not reasoning.strip():
         raise VLMClientError("VLM provider output contained invalid reasoning")
