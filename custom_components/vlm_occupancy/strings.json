@@ -49,13 +49,15 @@
   "options": {
     "step": {
       "init": {
-        "title": "Customize the evaluation prompt",
-        "description": "Changes take effect after saving. The required JSON output contract and image-instruction safety guard remain enforced.",
+        "title": "Customize evaluation and diagnostics",
+        "description": "Changes take effect after saving. Debug capture is off by default because rejected camera frames may contain sensitive imagery.",
         "data": {
-          "prompt": "Image evaluation prompt"
+          "prompt": "Image evaluation prompt",
+          "debug_capture_rejected_frames": "Capture the latest rejected frame for debugging"
         },
         "data_description": {
-          "prompt": "Describe the room layout and visual cues that should influence bed and wheelchair classification."
+          "prompt": "Describe the room layout and visual cues that should influence bed and wheelchair classification.",
+          "debug_capture_rejected_frames": "Opt-in: overwrite one protected file under /config/vlm_occupancy_debug. Disable this and delete the directory after troubleshooting."
         }
       }
     },

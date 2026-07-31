@@ -38,10 +38,12 @@ flowchart LR
     V -. explicit opt-in .-> GM[Gemini API]
 ```
 
-No camera file is created by the integration. The snapshot travels as bytes from
-the camera entity to the selected client, is base64-encoded in process memory,
-and is discarded after the request completes. In particular, the integration
-never writes to `/config/www`, `/media`, or another web-served directory.
+By default, no camera file is created by the integration. The snapshot travels
+as bytes from the camera entity to the selected client, is base64-encoded in
+process memory, and is discarded after the request completes. An explicit
+debug option can retain only the latest locally rejected frame in a protected,
+non-web-served directory. The integration never writes to `/config/www`,
+`/media`, or another web-served directory.
 Corrupt or overwhelmingly black cold-camera frames are rejected locally. The
 integration waits briefly and tries at most three snapshots before failing; an
 unusable frame is never sent to the VLM.
@@ -178,7 +180,42 @@ Every provider receives a schema equivalent to:
 
 Output is rejected unless it has exactly these fields, real booleans, a
 confidence between `0` and `1`, and a non-empty bounded reasoning string. A
-rejected result never replaces the last valid sensor state.
+zero-confidence response is also treated as inconclusive. A rejected or
+inconclusive result never replaces the last valid sensor state.
+
+## Troubleshooting and privacy-safe diagnostics
+
+To see evaluation attempts and image-quality measurements, temporarily add this
+to `configuration.yaml` and restart Home Assistant:
+
+```yaml
+logger:
+  logs:
+    custom_components.vlm_occupancy: debug
+```
+
+Run `vlm_occupancy.evaluate` from **Developer tools → Actions**, then open
+**Settings → System → Logs** and select **Load full logs**. Debug messages show
+the attempt number, duration, rejection reason, dimensions, mean brightness,
+contrast, and black-pixel ratio. They never contain image bytes, prompts, model
+reasoning, credentials, provider response bodies, or endpoint URLs.
+
+If those measurements are not enough, open the integration entry's
+**Configure** screen and enable **Capture the latest rejected frame for
+debugging**. This option is off by default. It captures rejected frames only,
+never a frame accepted for inference, and atomically overwrites a single file:
+
+```text
+/config/vlm_occupancy_debug/latest_rejected.jpg
+```
+
+The extension may instead be `.png`, `.webp`, or `.bin`. The directory is mode
+`0700` and the file is mode `0600`; neither is exposed through Home Assistant's
+web roots. The sensor's `debug_image_path` attribute reports the exact path
+written. Treat the file as sensitive: it can be included in configuration
+backups, so disable capture and delete `/config/vlm_occupancy_debug` when
+troubleshooting is complete. Also remove the debug logger configuration to
+avoid unnecessary log volume.
 
 ## Automation examples
 
@@ -255,8 +292,9 @@ Entity IDs are assigned by Home Assistant and may differ from the examples.
 ## Privacy and security model
 
 - **No streaming:** only a camera still requested for a specific evaluation.
-- **No snapshot files:** images remain in memory and are never placed in a web
-  root. The code also caps accepted images at 20 MiB.
+- **In-memory by default:** images remain in memory and are never placed in a
+  web root. The code also caps accepted images at 20 MiB. The opt-in diagnostic
+  mode retains only the latest rejected frame in a protected local directory.
 - **No stored raw keys:** config entries retain a reference to a `!secret`-backed
   alias or environment variable. Keys are added only to request headers.
 - **No sensitive error bodies:** HTTP response bodies, tokens, request payloads,

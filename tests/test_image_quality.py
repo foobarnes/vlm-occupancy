@@ -5,6 +5,7 @@ from __future__ import annotations
 from io import BytesIO
 import importlib.util
 from pathlib import Path
+import sys
 import unittest
 
 from PIL import Image, ImageDraw
@@ -16,6 +17,7 @@ spec = importlib.util.spec_from_file_location(
 )
 assert spec is not None and spec.loader is not None
 image_quality = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = image_quality
 spec.loader.exec_module(image_quality)
 
 
@@ -34,11 +36,13 @@ class ImageQualityTests(unittest.TestCase):
         )
 
     def test_rejects_nearly_black_frame(self) -> None:
-        self.assertFalse(
-            image_quality.is_usable_image(
-                _jpeg(Image.new("RGB", (320, 240), (6, 6, 6)))
-            )
+        quality = image_quality.inspect_image(
+            _jpeg(Image.new("RGB", (320, 240), (16, 16, 16)))
         )
+
+        self.assertFalse(quality.usable)
+        self.assertEqual(quality.reason, "nearly_black")
+        self.assertLessEqual(quality.mean_luma, 24)
 
     def test_accepts_visible_dark_scene(self) -> None:
         image = Image.new("RGB", (320, 240), (8, 8, 8))
@@ -54,7 +58,10 @@ class ImageQualityTests(unittest.TestCase):
         )
 
     def test_rejects_invalid_image(self) -> None:
-        self.assertFalse(image_quality.is_usable_image(b"not an image"))
+        quality = image_quality.inspect_image(b"not an image")
+
+        self.assertFalse(quality.usable)
+        self.assertEqual(quality.reason, "invalid_image")
 
 
 if __name__ == "__main__":

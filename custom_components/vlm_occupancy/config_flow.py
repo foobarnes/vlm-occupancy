@@ -20,6 +20,7 @@ from .const import (
     CONF_CAMERA_ENTITY_ID,
     CONF_CREDENTIAL_NAME,
     CONF_COOLDOWN,
+    CONF_DEBUG_CAPTURE,
     CONF_ENDPOINT,
     CONF_END_TIME,
     CONF_MODEL,
@@ -30,6 +31,7 @@ from .const import (
     CONF_START_TIME,
     DEFAULT_CREDENTIAL_NAMES,
     DEFAULT_COOLDOWN,
+    DEFAULT_DEBUG_CAPTURE,
     DEFAULT_ENDPOINTS,
     DEFAULT_END_TIME,
     DEFAULT_MODELS,
@@ -191,30 +193,42 @@ class VLMOccupancyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class VLMOccupancyOptionsFlow(config_entries.OptionsFlowWithReload):
-    """Allow prompt iteration without recreating the integration entry."""
+    """Allow prompt iteration and opt-in diagnostics."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Edit the customizable portion of the evaluation prompt."""
+        """Edit the prompt and privacy-sensitive diagnostic options."""
         errors: dict[str, str] = {}
         if user_input is not None:
             prompt = user_input[CONF_PROMPT].strip()
             if not prompt or len(prompt) > MAX_PROMPT_LENGTH:
                 errors[CONF_PROMPT] = "invalid_prompt"
             else:
-                return self.async_create_entry(data={CONF_PROMPT: prompt})
+                return self.async_create_entry(
+                    data={
+                        CONF_PROMPT: prompt,
+                        CONF_DEBUG_CAPTURE: user_input[CONF_DEBUG_CAPTURE],
+                    }
+                )
 
         current_prompt = self.config_entry.options.get(
             CONF_PROMPT,
             self.config_entry.data.get(CONF_PROMPT, DEFAULT_PROMPT),
+        )
+        current_debug_capture = self.config_entry.options.get(
+            CONF_DEBUG_CAPTURE, DEFAULT_DEBUG_CAPTURE
         )
         schema = vol.Schema(
             {
                 vol.Required(
                     CONF_PROMPT,
                     default=current_prompt,
-                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True))
+                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
+                vol.Required(
+                    CONF_DEBUG_CAPTURE,
+                    default=current_debug_capture,
+                ): selector.BooleanSelector(),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

@@ -100,6 +100,13 @@ class ParseResultTests(unittest.TestCase):
                 '"reasoning":"Visible cues."}'
             )
 
+    def test_rejects_zero_confidence_as_inconclusive(self) -> None:
+        with self.assertRaisesRegex(VLMClientError, "nonzero confidence"):
+            parse_result(
+                '{"in_bed":false,"wheelchair_parked":false,"confidence":0,'
+                '"reasoning":"Image is too dark to classify."}'
+            )
+
 
 class _ConcreteClient(client_module.VLMClient):
     async def async_evaluate(self, image: bytes, content_type: str):

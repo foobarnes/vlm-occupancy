@@ -3,6 +3,22 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.3.0 - 2026-07-31
+
+### Added
+
+- Opt-in capture of the latest rejected camera frame in a protected,
+  non-web-served directory, with single-file retention and restrictive
+  permissions.
+- Sanitized debug logs for snapshot attempts, image-quality measurements, and
+  evaluation timing, plus diagnostic entity attributes.
+
+### Changed
+
+- Detect video-range near-black and dark low-contrast frames more reliably.
+- Treat zero-confidence VLM responses as inconclusive and retain the previous
+  valid sensor state.
+
 ## 0.2.1 - 2026-07-31
 
 ### Fixed

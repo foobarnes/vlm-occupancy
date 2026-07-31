@@ -13,7 +13,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_CAMERA_ENTITY_ID, CONF_PROVIDER, DOMAIN
+from .const import (
+    CONF_CAMERA_ENTITY_ID,
+    CONF_DEBUG_CAPTURE,
+    CONF_PROVIDER,
+    DEFAULT_DEBUG_CAPTURE,
+    DOMAIN,
+)
 from .coordinator import VLMOccupancyRuntime
 
 
@@ -67,7 +73,16 @@ class VLMOccupancyBinarySensor(BinarySensorEntity):
                 if self._runtime.last_evaluated is not None
                 else None
             ),
+            "last_attempted": (
+                self._runtime.last_attempted.isoformat()
+                if self._runtime.last_attempted is not None
+                else None
+            ),
             "last_error": self._runtime.last_error,
+            "debug_capture_enabled": self._entry.options.get(
+                CONF_DEBUG_CAPTURE, DEFAULT_DEBUG_CAPTURE
+            ),
+            "debug_image_path": self._runtime.last_debug_image,
             "camera_entity_id": self._entry.data[CONF_CAMERA_ENTITY_ID],
             "provider": self._entry.data[CONF_PROVIDER],
         }

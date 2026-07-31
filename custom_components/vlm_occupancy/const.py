@@ -19,6 +19,7 @@ CONF_END_TIME: Final = "end_time"
 CONF_POLL_INTERVAL: Final = "poll_interval_minutes"
 CONF_COOLDOWN: Final = "cooldown_seconds"
 CONF_PROMPT: Final = "prompt"
+CONF_DEBUG_CAPTURE: Final = "debug_capture_rejected_frames"
 
 PROVIDER_OLLAMA: Final = "ollama"
 PROVIDER_OPENAI: Final = "openai"
@@ -45,6 +46,7 @@ DEFAULT_START_TIME: Final = "00:00:00"
 DEFAULT_END_TIME: Final = "00:00:00"
 DEFAULT_POLL_INTERVAL: Final = 0
 DEFAULT_COOLDOWN: Final = 30
+DEFAULT_DEBUG_CAPTURE: Final = False
 DEFAULT_PROMPT: Final = """Analyze this single bedroom camera image for two facts.
 1. Decide whether a person is in the bed. Account for blankets, body-shaped contours,
    visible head/limbs, bed deformation, and partial occlusion. Do not assume a rumpled
@@ -60,3 +62,4 @@ ATTR_FORCE: Final = "force"
 MAX_IMAGE_BYTES: Final = 20 * 1024 * 1024
 SNAPSHOT_ATTEMPTS: Final = 3
 SNAPSHOT_RETRY_DELAY_SECONDS: Final = 2
+DEBUG_IMAGE_DIRECTORY: Final = "vlm_occupancy_debug"
