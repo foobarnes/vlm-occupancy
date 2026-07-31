@@ -1,0 +1,20 @@
+evaluate:
+  name: Evaluate occupancy
+  description: >-
+    Capture one in-memory camera still and update one or all VLM occupancy
+    sensors. Explicit calls are allowed outside the configured automatic window.
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: Leave empty to evaluate every loaded VLM Occupancy entry.
+      required: false
+      selector:
+        config_entry:
+          integration: vlm_occupancy
+    force:
+      name: Ignore cooldown
+      description: Evaluate even when the entry's debounce cooldown is active.
+      required: false
+      default: false
+      selector:
+        boolean:

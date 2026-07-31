@@ -1,0 +1,13 @@
+{
+  "domain": "vlm_occupancy",
+  "name": "VLM Bed & Wheelchair Occupancy Sensor",
+  "codeowners": ["@foobarnes"],
+  "config_flow": true,
+  "dependencies": ["camera"],
+  "documentation": "https://github.com/foobarnes/vlm-occupancy",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/foobarnes/vlm-occupancy/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

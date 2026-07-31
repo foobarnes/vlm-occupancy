@@ -1,0 +1,68 @@
+{
+  "title": "VLM Bed & Wheelchair Occupancy Sensor",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose a camera and local-first provider",
+        "description": "No video is streamed. Ollama is the default and keeps bedroom images on your LAN.",
+        "data": {
+          "name": "Name",
+          "camera_entity_id": "Camera",
+          "provider": "VLM provider",
+          "motion_entity_id": "Motion sensor (optional)"
+        },
+        "data_description": {
+          "motion_entity_id": "An off-to-on transition triggers one evaluation inside the configured time window."
+        }
+      },
+      "provider": {
+        "title": "Configure sparse evaluation",
+        "description": "Use a credential reference, never a raw key. It must name an api_keys alias from configuration.yaml (resolved with !secret) or an environment variable.",
+        "data": {
+          "endpoint": "API endpoint",
+          "model": "Vision model",
+          "credential_name": "Credential reference (optional for local Ollama)",
+          "start_time": "Automatic window starts",
+          "end_time": "Automatic window ends",
+          "poll_interval_minutes": "Sparse polling interval (0 disables)",
+          "cooldown_seconds": "Debounce cooldown"
+        },
+        "data_description": {
+          "start_time": "Equal start and end times mean all day.",
+          "credential_name": "For example, ollama_key, OPENAI_API_KEY, or GEMINI_API_KEY."
+        }
+      }
+    },
+    "error": {
+      "invalid_endpoint": "Enter a complete endpoint without credentials or query parameters. Cloud providers require HTTPS.",
+      "invalid_credential_name": "Use a valid alias or environment variable name.",
+      "credential_missing": "That credential reference was not found in api_keys or the environment.",
+      "api_key_required": "Cloud providers require a credential reference."
+    },
+    "abort": {
+      "already_configured": "This camera and provider are already configured."
+    }
+  },
+  "selector": {
+    "provider": {
+      "options": {
+        "ollama": "Ollama / local OpenAI-compatible (recommended)",
+        "openai": "OpenAI API",
+        "gemini": "Google Gemini API"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "bed_occupancy": {
+        "name": "Bed occupancy"
+      }
+    }
+  },
+  "services": {
+    "evaluate": {
+      "name": "Evaluate occupancy",
+      "description": "Capture one still and evaluate bed and wheelchair occupancy."
+    }
+  }
+}
