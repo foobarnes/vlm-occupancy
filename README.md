@@ -97,7 +97,8 @@ integration update still requires a Home Assistant restart.
 3. Add the integration from **Settings → Devices & services**.
 
 Choose the camera, provider, model, automatic window, and optional motion entity.
-Ollama is selected by default.
+Ollama is selected by default. The setup form also shows the default evaluation
+prompt so it can be tailored to the room layout.
 
 For a local Ollama server, pull a vision-capable model first, for example:
 
@@ -147,6 +148,19 @@ Cloud endpoints must use HTTPS; endpoint URLs containing credentials, query
 parameters, or fragments are rejected.
 
 ## Structured output
+
+### Customize the evaluation prompt
+
+Open **Settings → Devices & services → VLM Bed & Wheelchair Occupancy Sensor**,
+select **Configure** on the integration entry, edit the prompt, and save. The
+entry reloads automatically, so the next manual or automatic evaluation uses
+the new prompt. Existing installations receive the documented default until a
+custom prompt is saved.
+
+Use the editable portion for scene-specific guidance, such as which side of the
+bed normally holds the wheelchair or which blanket shapes commonly cause false
+positives. The integration always appends its prompt-injection warning and
+required JSON-output instructions; those safeguards are not editable.
 
 Every provider receives a schema equivalent to:
 

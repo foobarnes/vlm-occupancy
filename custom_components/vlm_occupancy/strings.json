@@ -25,11 +25,13 @@
           "start_time": "Automatic window starts",
           "end_time": "Automatic window ends",
           "poll_interval_minutes": "Sparse polling interval (0 disables)",
-          "cooldown_seconds": "Debounce cooldown"
+          "cooldown_seconds": "Debounce cooldown",
+          "prompt": "Image evaluation prompt"
         },
         "data_description": {
           "start_time": "Equal start and end times mean all day.",
-          "credential_name": "For example, ollama_key, OPENAI_API_KEY, or GEMINI_API_KEY."
+          "credential_name": "For example, ollama_key, OPENAI_API_KEY, or GEMINI_API_KEY.",
+          "prompt": "Customize the scene-specific instructions. The integration always appends its JSON schema and safety requirements."
         }
       }
     },
@@ -37,10 +39,28 @@
       "invalid_endpoint": "Enter a complete endpoint without credentials or query parameters. Cloud providers require HTTPS.",
       "invalid_credential_name": "Use a valid alias or environment variable name.",
       "credential_missing": "That credential reference was not found in api_keys or the environment.",
-      "api_key_required": "Cloud providers require a credential reference."
+      "api_key_required": "Cloud providers require a credential reference.",
+      "invalid_prompt": "Enter a prompt between 1 and 8,000 characters."
     },
     "abort": {
       "already_configured": "This camera and provider are already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Customize the evaluation prompt",
+        "description": "Changes take effect after saving. The required JSON output contract and image-instruction safety guard remain enforced.",
+        "data": {
+          "prompt": "Image evaluation prompt"
+        },
+        "data_description": {
+          "prompt": "Describe the room layout and visual cues that should influence bed and wheelchair classification."
+        }
+      }
+    },
+    "error": {
+      "invalid_prompt": "Enter a prompt between 1 and 8,000 characters."
     }
   },
   "selector": {

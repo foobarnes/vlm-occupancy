@@ -12,6 +12,7 @@ from yarl import URL
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_NAME
+from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
@@ -24,6 +25,7 @@ from .const import (
     CONF_MODEL,
     CONF_MOTION_ENTITY_ID,
     CONF_POLL_INTERVAL,
+    CONF_PROMPT,
     CONF_PROVIDER,
     CONF_START_TIME,
     DEFAULT_CREDENTIAL_NAMES,
@@ -32,8 +34,10 @@ from .const import (
     DEFAULT_END_TIME,
     DEFAULT_MODELS,
     DEFAULT_POLL_INTERVAL,
+    DEFAULT_PROMPT,
     DEFAULT_START_TIME,
     DOMAIN,
+    MAX_PROMPT_LENGTH,
     PROVIDER_OLLAMA,
     PROVIDERS,
 )
@@ -49,6 +53,14 @@ class VLMOccupancyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the flow."""
         self._base: dict[str, Any] = {}
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> VLMOccupancyOptionsFlow:
+        """Create the editable prompt options flow."""
+        return VLMOccupancyOptionsFlow()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -103,7 +115,12 @@ class VLMOccupancyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif provider != PROVIDER_OLLAMA and not credential_name:
                 errors[CONF_CREDENTIAL_NAME] = "api_key_required"
 
+            prompt = user_input[CONF_PROMPT].strip()
+            if not prompt or len(prompt) > MAX_PROMPT_LENGTH:
+                errors[CONF_PROMPT] = "invalid_prompt"
+
             if not errors:
+                user_input[CONF_PROMPT] = prompt
                 data = {**self._base, **user_input}
                 unique_id = f"{data[CONF_CAMERA_ENTITY_ID]}:{data[CONF_PROVIDER]}"
                 await self.async_set_unique_id(unique_id)
@@ -162,11 +179,45 @@ class VLMOccupancyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         unit_of_measurement="s",
                     )
                 ),
+                vol.Required(
+                    CONF_PROMPT,
+                    default=defaults.get(CONF_PROMPT, DEFAULT_PROMPT),
+                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
             }
         )
         return self.async_show_form(
             step_id="provider", data_schema=schema, errors=errors
         )
+
+
+class VLMOccupancyOptionsFlow(config_entries.OptionsFlowWithReload):
+    """Allow prompt iteration without recreating the integration entry."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Edit the customizable portion of the evaluation prompt."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            prompt = user_input[CONF_PROMPT].strip()
+            if not prompt or len(prompt) > MAX_PROMPT_LENGTH:
+                errors[CONF_PROMPT] = "invalid_prompt"
+            else:
+                return self.async_create_entry(data={CONF_PROMPT: prompt})
+
+        current_prompt = self.config_entry.options.get(
+            CONF_PROMPT,
+            self.config_entry.data.get(CONF_PROMPT, DEFAULT_PROMPT),
+        )
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_PROMPT,
+                    default=current_prompt,
+                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True))
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
 
 
 def _valid_endpoint(value: str, *, require_https: bool = False) -> bool:

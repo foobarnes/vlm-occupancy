@@ -18,6 +18,7 @@ CONF_START_TIME: Final = "start_time"
 CONF_END_TIME: Final = "end_time"
 CONF_POLL_INTERVAL: Final = "poll_interval_minutes"
 CONF_COOLDOWN: Final = "cooldown_seconds"
+CONF_PROMPT: Final = "prompt"
 
 PROVIDER_OLLAMA: Final = "ollama"
 PROVIDER_OPENAI: Final = "openai"
@@ -44,6 +45,13 @@ DEFAULT_START_TIME: Final = "00:00:00"
 DEFAULT_END_TIME: Final = "00:00:00"
 DEFAULT_POLL_INTERVAL: Final = 0
 DEFAULT_COOLDOWN: Final = 30
+DEFAULT_PROMPT: Final = """Analyze this single bedroom camera image for two facts.
+1. Decide whether a person is in the bed. Account for blankets, body-shaped contours,
+   visible head/limbs, bed deformation, and partial occlusion. Do not assume a rumpled
+   blanket alone is a person.
+2. Decide whether a wheelchair appears parked in its expected position beside the bed.
+   A single image shows placement, not proof of lack of motion; use spatial appearance."""
+MAX_PROMPT_LENGTH: Final = 8000
 
 SERVICE_EVALUATE: Final = "evaluate"
 ATTR_CONFIG_ENTRY_ID: Final = "config_entry_id"
