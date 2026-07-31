@@ -40,7 +40,10 @@ from .const import (
     DEFAULT_START_TIME,
     DOMAIN,
     MAX_IMAGE_BYTES,
+    SNAPSHOT_ATTEMPTS,
+    SNAPSHOT_RETRY_DELAY_SECONDS,
 )
+from .image_quality import is_usable_image
 from .vlm_client import OccupancyResult, VLMClient, VLMClientError, create_client
 
 _LOGGER = logging.getLogger(__name__)
@@ -137,17 +140,7 @@ class VLMOccupancyRuntime:
 
             self._last_request_monotonic = now_monotonic
             try:
-                image = await async_get_image(
-                    self.hass,
-                    self.entry.data[CONF_CAMERA_ENTITY_ID],
-                    timeout=15,
-                )
-                content = image.content
-                content_type = image.content_type or "image/jpeg"
-                if not content or len(content) > MAX_IMAGE_BYTES:
-                    raise VLMClientError("Camera snapshot size is invalid")
-                if not content_type.startswith("image/"):
-                    raise VLMClientError("Camera did not return an image")
+                content, content_type = await self._async_get_usable_snapshot()
                 self.result = await self.client.async_evaluate(content, content_type)
             except VLMClientError as err:
                 self.last_error = str(err)
@@ -162,6 +155,35 @@ class VLMOccupancyRuntime:
             self.last_error = None
             self._notify_listeners()
             return self.result
+
+    async def _async_get_usable_snapshot(self) -> tuple[bytes, str]:
+        """Retry cold cameras without sending blank or malformed frames."""
+        for attempt in range(SNAPSHOT_ATTEMPTS):
+            try:
+                image = await async_get_image(
+                    self.hass,
+                    self.entry.data[CONF_CAMERA_ENTITY_ID],
+                    timeout=15,
+                )
+                content = image.content
+                content_type = image.content_type or "image/jpeg"
+                if (
+                    content
+                    and len(content) <= MAX_IMAGE_BYTES
+                    and content_type.startswith("image/")
+                    and await self.hass.async_add_executor_job(is_usable_image, content)
+                ):
+                    return content, content_type
+            except Exception:
+                # Camera integrations may fail while starting a cold stream.
+                pass
+
+            if attempt < SNAPSHOT_ATTEMPTS - 1:
+                await asyncio.sleep(SNAPSHOT_RETRY_DELAY_SECONDS)
+
+        raise VLMClientError(
+            f"Camera did not provide a usable image after {SNAPSHOT_ATTEMPTS} attempts"
+        )
 
     @callback
     def _motion_changed(self, event: Event) -> None:
