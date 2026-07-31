@@ -1,6 +1,6 @@
 # VLM Bed & Wheelchair Occupancy Sensor
 
-![VLM Bed & Wheelchair Occupancy Sensor icon](brand/icon.png)
+![VLM Bed & Wheelchair Occupancy Sensor icon](custom_components/vlm_occupancy/brand/icon.png)
 
 A local-first Home Assistant custom integration that evaluates **single camera
 stills**, not video streams, to estimate:
