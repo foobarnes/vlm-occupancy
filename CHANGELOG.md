@@ -3,6 +3,14 @@
 All notable changes to this project are documented here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.2.1 - 2026-07-31
+
+### Fixed
+
+- Reject corrupt or overwhelmingly black camera frames locally and retry cold
+  cameras up to three times before returning a sanitized error. Unusable frames
+  are never sent to the configured VLM.
+
 ## 0.2.0 - 2026-07-31
 
 ### Added

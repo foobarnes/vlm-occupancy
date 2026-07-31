@@ -42,6 +42,9 @@ No camera file is created by the integration. The snapshot travels as bytes from
 the camera entity to the selected client, is base64-encoded in process memory,
 and is discarded after the request completes. In particular, the integration
 never writes to `/config/www`, `/media`, or another web-served directory.
+Corrupt or overwhelmingly black cold-camera frames are rejected locally. The
+integration waits briefly and tries at most three snapshots before failing; an
+unusable frame is never sent to the VLM.
 
 ```mermaid
 sequenceDiagram

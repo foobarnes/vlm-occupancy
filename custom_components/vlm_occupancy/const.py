@@ -58,3 +58,5 @@ ATTR_CONFIG_ENTRY_ID: Final = "config_entry_id"
 ATTR_FORCE: Final = "force"
 
 MAX_IMAGE_BYTES: Final = 20 * 1024 * 1024
+SNAPSHOT_ATTEMPTS: Final = 3
+SNAPSHOT_RETRY_DELAY_SECONDS: Final = 2
